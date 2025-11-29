@@ -1,10 +1,7 @@
 package com.mindapp.client.ui;
 
 import java.io.File;
-import java.io.IOException;
 import java.util.Optional;
-
-import javax.imageio.ImageIO;
 
 import com.mindapp.client.api.ApiClient;
 import com.mindapp.client.models.MindMap;
@@ -12,14 +9,21 @@ import com.mindapp.client.models.Node;
 import com.mindapp.client.patterns.ClipboardManager;
 import com.mindapp.client.patterns.CurvedLineStrategy;
 import com.mindapp.client.patterns.DarkThemeFactory;
+import com.mindapp.client.patterns.FullMapExporter;
+import com.mindapp.client.patterns.IExportFormat;
 import com.mindapp.client.patterns.IPrototype;
+import com.mindapp.client.patterns.JsonFormat;
 import com.mindapp.client.patterns.LightThemeFactory;
 import com.mindapp.client.patterns.LineStrategy;
+import com.mindapp.client.patterns.MapExporter;
+import com.mindapp.client.patterns.MapGroup;
+import com.mindapp.client.patterns.MapItem;
+import com.mindapp.client.patterns.MapLeaf;
 import com.mindapp.client.patterns.NodeRenderer;
 import com.mindapp.client.patterns.StraightLineStrategy;
+import com.mindapp.client.patterns.TextFormat;
 import com.mindapp.client.patterns.ThemeFactory;
 
-import javafx.embed.swing.SwingFXUtils;
 import javafx.scene.Scene;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
@@ -37,7 +41,6 @@ import javafx.scene.control.TextInputDialog;
 import javafx.scene.control.ToolBar;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
-import javafx.scene.image.WritableImage;
 import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.BorderPane;
@@ -90,6 +93,38 @@ public class EditorForm {
         draw(); // Перемальовуємо полотно
     }
 
+    // Метод для демонстрації Composite (альтернативний варіант)
+    private void showCompositeStats() {
+        if (map.getRootNode() == null) return;
+
+        // 1. Будуємо дерево Композита з нашої моделі Node
+        MapItem compositeRoot = buildCompositeTree(map.getRootNode());
+
+        // 2. Використовуємо його
+        System.out.println("\n--- COMPOSITE PATTERN OUTPUT ---");
+        compositeRoot.print("");
+        System.out.println("--------------------------------");
+
+        int totalSize = compositeRoot.getSize();
+        showAlert("Статистика (Composite):\nЗагальний об'єм тексту: " + totalSize + " символів.");
+    }
+
+    // Рекурсивний метод-конвертер: Node -> MapItem
+    private MapItem buildCompositeTree(Node node) {
+        // Якщо у вузла немає дітей - це Листок
+        if (node.getChildren().isEmpty()) {
+            return new MapLeaf(node);
+        } else {
+            // Якщо є діти - це Група
+            MapGroup group = new MapGroup(node.getText());
+            for (Node child : node.getChildren()) {
+                // Рекурсивно додаємо дітей
+                group.add(buildCompositeTree(child));
+            }
+            return group;
+        }
+    }
+
     public BorderPane createContent() {
         BorderPane root = new BorderPane();
 
@@ -106,6 +141,9 @@ public class EditorForm {
         // Кнопка перемикання стратегії ліній (Strategy Pattern Demo)
         Button btnLineStyle = new Button("〰 Лінії");
         btnLineStyle.setOnAction(e -> toggleLineStrategy());
+
+        Button btnStats = new Button("📊 Статистика");
+        btnStats.setOnAction(e -> showCompositeStats());
 
         // Кнопки швидкого доступу
         Button btnAddChild = new Button("➕ Вузол");
@@ -135,6 +173,7 @@ public class EditorForm {
                 btnAddChild, btnAddImg, btnAddVid, btnUrgent, btnArea,
                 new Separator(),
                 btnExport,
+                btnStats,
                 btnTheme,
                 btnLineStyle);
 
@@ -202,30 +241,35 @@ public class EditorForm {
         }
     }
 
-    // --- ЕКСПОРТ У ЗОБРАЖЕННЯ ---
     private void exportMap() {
         FileChooser fileChooser = new FileChooser();
-        fileChooser.setTitle("Зберегти карту як зображення");
-        fileChooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("PNG Зображення", "*.png"));
-
-        // Пропонуємо ім'я файлу
-        fileChooser.setInitialFileName(map.getTitle() + ".png");
+        fileChooser.setTitle("Експорт мапи (Bridge Pattern)");
+        fileChooser.setInitialFileName(map.getTitle());
+        
+        // Додаємо фільтри
+        FileChooser.ExtensionFilter extTxt = new FileChooser.ExtensionFilter("Text File", "*.txt");
+        FileChooser.ExtensionFilter extJson = new FileChooser.ExtensionFilter("JSON File", "*.json");
+        fileChooser.getExtensionFilters().addAll(extTxt, extJson);
 
         File file = fileChooser.showSaveDialog(canvas.getScene().getWindow());
 
         if (file != null) {
-            try {
-                // 1. Робимо "знімок" (snapshot) канвасу
-                WritableImage writableImage = new WritableImage((int) canvas.getWidth(), (int) canvas.getHeight());
-                canvas.snapshot(null, writableImage);
+            String fileName = file.getName().toLowerCase();
+            IExportFormat format = null;
 
-                // 2. Конвертуємо JavaFX Image у буферизоване зображення для запису
-                // (тут і потрібен javafx-swing)
-                ImageIO.write(SwingFXUtils.fromFXImage(writableImage, null), "png", file);
+            // 1. Вибираємо Implementor (Формат)
+            if (fileName.endsWith(".txt")) {
+                format = new TextFormat();
+            } else if (fileName.endsWith(".json")) {
+                format = new JsonFormat();
+            }
 
-                new Alert(Alert.AlertType.INFORMATION, "Карту успішно експортовано!").show();
-            } catch (IOException e) {
-                new Alert(Alert.AlertType.ERROR, "Помилка експорту: " + e.getMessage()).show();
+            if (format != null) {
+                // 2. Створюємо Abstraction (Експортер) і передаємо йому Implementor
+                MapExporter exporter = new FullMapExporter(format);
+                exporter.export(map, file);
+                
+                new Alert(Alert.AlertType.INFORMATION, "Успішно експортовано!").show();
             }
         }
     }
