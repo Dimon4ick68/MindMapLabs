@@ -9,10 +9,12 @@ import javax.imageio.ImageIO;
 import com.mindapp.client.api.ApiClient;
 import com.mindapp.client.models.MindMap;
 import com.mindapp.client.models.Node;
+import com.mindapp.client.patterns.CurvedLineStrategy;
 import com.mindapp.client.patterns.DarkThemeFactory;
 import com.mindapp.client.patterns.LightThemeFactory;
 import com.mindapp.client.patterns.LineStrategy;
 import com.mindapp.client.patterns.NodeRenderer;
+import com.mindapp.client.patterns.StraightLineStrategy;
 import com.mindapp.client.patterns.ThemeFactory;
 
 import javafx.embed.swing.SwingFXUtils;
@@ -77,6 +79,14 @@ public class EditorForm {
         }
     }
 
+    private void toggleLineStrategy() {
+    if (lineStrategy instanceof StraightLineStrategy) {
+        lineStrategy = new CurvedLineStrategy(); // Перемикаємо на криві
+    } else {
+        lineStrategy = new StraightLineStrategy(); // Перемикаємо на прямі
+    }
+    draw(); // Перемальовуємо полотно
+        }
     public BorderPane createContent() {
         BorderPane root = new BorderPane();
 
@@ -87,7 +97,14 @@ public class EditorForm {
             map.setTitle(titleField.getText());
             saveMap();
         });
-        
+
+        // ... всередині createContent() ...
+
+    
+// Кнопка перемикання стратегії ліній (Strategy Pattern Demo)
+        Button btnLineStyle = new Button("〰 Лінії");
+        btnLineStyle.setOnAction(e -> toggleLineStrategy());
+
         // Кнопки швидкого доступу
         Button btnAddChild = new Button("➕ Вузол");
         btnAddChild.setOnAction(e -> addChildNode());
@@ -116,7 +133,8 @@ public class EditorForm {
             btnAddChild, btnAddImg, btnAddVid, btnUrgent, btnArea,
             new Separator(),
             btnExport,
-            btnTheme
+            btnTheme,
+            btnLineStyle
         );
 
         // --- 2. ПОЛОТНО (CANVAS) ---
