@@ -3,7 +3,9 @@ package com.mindapp.client.models;
 import java.util.ArrayList;
 import java.util.List;
 
-public class Node implements Cloneable {
+import com.mindapp.client.patterns.IPrototype;
+
+public class Node implements Cloneable, IPrototype {
     private Long id;
     private String text;
     private double x;
@@ -14,7 +16,6 @@ public class Node implements Cloneable {
     private String attachmentPath;
     private String category = "NORMAL";
     
-    // --- ОСЬ ЦЬОГО НЕ ВИСТАЧАЛО ---
     private String borderColor; 
     // ------------------------------
     
@@ -32,21 +33,29 @@ public class Node implements Cloneable {
     public Node clone() {
         try {
             Node cloned = (Node) super.clone();
-            cloned.setId(null);
+            cloned.setId(null); // Скидаємо ID, бо це новий об'єкт
             
-            // Копіюємо всі поля
-            cloned.attachmentType = this.attachmentType;
-            cloned.attachmentPath = this.attachmentPath;
-            cloned.category = this.category;
-            cloned.borderColor = this.borderColor; // Не забуваємо про копіювання бордера
+            // Копіювання полів (String і так immutable, тому просто присвоюємо)
+            cloned.setText(this.getText());
+            cloned.setX(this.getX());
+            cloned.setY(this.getY());
+            cloned.setAttachmentType(this.getAttachmentType());
+            cloned.setAttachmentPath(this.getAttachmentPath());
+            cloned.setCategory(this.getCategory());
+            cloned.setBorderColor(this.getBorderColor());
             
-            cloned.children = new ArrayList<>();
-            for (Node child : this.children) {
-                cloned.children.add(child.clone());
+            // Глибоке копіювання дітей (щоб скопіювати всю гілку)
+            List<Node> clonedChildren = new ArrayList<>();
+            if (this.getChildren() != null) {
+                for (Node child : this.getChildren()) {
+                    clonedChildren.add(child.clone()); // Рекурсивний виклик
+                }
             }
+            cloned.setChildren(clonedChildren);
+            
             return cloned;
         } catch (CloneNotSupportedException e) {
-            throw new RuntimeException(e);
+            throw new RuntimeException("Cloning not supported", e);
         }
     }
 

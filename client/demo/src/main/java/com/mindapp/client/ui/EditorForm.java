@@ -9,8 +9,10 @@ import javax.imageio.ImageIO;
 import com.mindapp.client.api.ApiClient;
 import com.mindapp.client.models.MindMap;
 import com.mindapp.client.models.Node;
+import com.mindapp.client.patterns.ClipboardManager;
 import com.mindapp.client.patterns.CurvedLineStrategy;
 import com.mindapp.client.patterns.DarkThemeFactory;
+import com.mindapp.client.patterns.IPrototype;
 import com.mindapp.client.patterns.LightThemeFactory;
 import com.mindapp.client.patterns.LineStrategy;
 import com.mindapp.client.patterns.NodeRenderer;
@@ -52,10 +54,10 @@ import javafx.stage.Stage;
 public class EditorForm {
     private final MindMap map;
     private final ApiClient apiClient = new ApiClient();
-    
+
     private Canvas canvas;
     private GraphicsContext gc;
-    
+
     // --- ПАТЕРНИ ---
     // Abstract Factory: Фабрика тем
     private ThemeFactory currentThemeFactory = new LightThemeFactory();
@@ -67,7 +69,7 @@ public class EditorForm {
     // Стан редактора
     private Node selectedNode = null;
     private double dragOffsetX, dragOffsetY;
-    
+
     // Зберігаємо активне меню, щоб закривати попереднє (фікс бага)
     private ContextMenu currentContextMenu;
 
@@ -75,18 +77,19 @@ public class EditorForm {
         this.map = map;
         // Створюємо корінь, якщо мапа пуста
         if (map.getRootNode() == null) {
-             map.setRootNode(new Node("Центральна ідея", 600, 400));
+            map.setRootNode(new Node("Центральна ідея", 600, 400));
         }
     }
 
     private void toggleLineStrategy() {
-    if (lineStrategy instanceof StraightLineStrategy) {
-        lineStrategy = new CurvedLineStrategy(); // Перемикаємо на криві
-    } else {
-        lineStrategy = new StraightLineStrategy(); // Перемикаємо на прямі
-    }
-    draw(); // Перемальовуємо полотно
+        if (lineStrategy instanceof StraightLineStrategy) {
+            lineStrategy = new CurvedLineStrategy(); // Перемикаємо на криві
+        } else {
+            lineStrategy = new StraightLineStrategy(); // Перемикаємо на прямі
         }
+        draw(); // Перемальовуємо полотно
+    }
+
     public BorderPane createContent() {
         BorderPane root = new BorderPane();
 
@@ -100,8 +103,7 @@ public class EditorForm {
 
         // ... всередині createContent() ...
 
-    
-// Кнопка перемикання стратегії ліній (Strategy Pattern Demo)
+        // Кнопка перемикання стратегії ліній (Strategy Pattern Demo)
         Button btnLineStyle = new Button("〰 Лінії");
         btnLineStyle.setOnAction(e -> toggleLineStrategy());
 
@@ -111,13 +113,13 @@ public class EditorForm {
 
         Button btnAddImg = new Button("🖼️ Фото");
         btnAddImg.setOnAction(e -> attachFile("IMAGE"));
-        
+
         Button btnAddVid = new Button("🎥 Відео");
         btnAddVid.setOnAction(e -> attachFile("VIDEO"));
-        
+
         Button btnUrgent = new Button("❗ Важливо");
         btnUrgent.setOnAction(e -> toggleCategory("IMPORTANT"));
-        
+
         Button btnArea = new Button("🔲 Область");
         btnArea.setOnAction(e -> toggleCategory("AREA"));
 
@@ -128,14 +130,13 @@ public class EditorForm {
         btnTheme.setOnAction(e -> toggleTheme());
 
         ToolBar toolbar = new ToolBar(
-            new Label("Назва:"), titleField, btnSave, 
-            new Separator(), 
-            btnAddChild, btnAddImg, btnAddVid, btnUrgent, btnArea,
-            new Separator(),
-            btnExport,
-            btnTheme,
-            btnLineStyle
-        );
+                new Label("Назва:"), titleField, btnSave,
+                new Separator(),
+                btnAddChild, btnAddImg, btnAddVid, btnUrgent, btnArea,
+                new Separator(),
+                btnExport,
+                btnTheme,
+                btnLineStyle);
 
         // --- 2. ПОЛОТНО (CANVAS) ---
         canvas = new Canvas(3000, 2000); // Велике полотно
@@ -166,16 +167,17 @@ public class EditorForm {
         if (map.getRootNode() != null) {
             drawTreeRecursive(map.getRootNode());
         }
-        
+
         // Рамка виділення
         if (selectedNode != null) {
             double padding = 4;
             double w = getActualWidth(selectedNode);
             double h = getActualHeight(selectedNode);
-            
+
             gc.setStroke(Color.RED);
             gc.setLineWidth(2);
-            gc.strokeRect(selectedNode.getX() - padding, selectedNode.getY() - padding, w + padding*2, h + padding*2);
+            gc.strokeRect(selectedNode.getX() - padding, selectedNode.getY() - padding, w + padding * 2,
+                    h + padding * 2);
         }
     }
 
@@ -193,18 +195,19 @@ public class EditorForm {
 
         // 3. Малюємо вузол (Bridge)
         nodeRenderer.render(gc, current);
-        
+
         // 5. Позначка "Важливо"
         if ("IMPORTANT".equals(current.getCategory())) {
             drawImportantMark(current);
         }
     }
+
     // --- ЕКСПОРТ У ЗОБРАЖЕННЯ ---
     private void exportMap() {
         FileChooser fileChooser = new FileChooser();
         fileChooser.setTitle("Зберегти карту як зображення");
         fileChooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("PNG Зображення", "*.png"));
-        
+
         // Пропонуємо ім'я файлу
         fileChooser.setInitialFileName(map.getTitle() + ".png");
 
@@ -215,11 +218,11 @@ public class EditorForm {
                 // 1. Робимо "знімок" (snapshot) канвасу
                 WritableImage writableImage = new WritableImage((int) canvas.getWidth(), (int) canvas.getHeight());
                 canvas.snapshot(null, writableImage);
-                
+
                 // 2. Конвертуємо JavaFX Image у буферизоване зображення для запису
                 // (тут і потрібен javafx-swing)
                 ImageIO.write(SwingFXUtils.fromFXImage(writableImage, null), "png", file);
-                
+
                 new Alert(Alert.AlertType.INFORMATION, "Карту успішно експортовано!").show();
             } catch (IOException e) {
                 new Alert(Alert.AlertType.ERROR, "Помилка експорту: " + e.getMessage()).show();
@@ -228,14 +231,15 @@ public class EditorForm {
     }
 
     private void drawAttachment(Node node) {
-        if (node.getAttachmentPath() == null || "NONE".equals(node.getAttachmentType())) return;
+        if (node.getAttachmentPath() == null || "NONE".equals(node.getAttachmentType()))
+            return;
 
         double w = getActualWidth(node);
         double h = getActualHeight(node);
-        
+
         // Координати мініатюри всередині вузла
         double imgX = node.getX() + 10;
-        double imgY = node.getY() + 35; 
+        double imgY = node.getY() + 35;
         double imgW = w - 20;
         double imgH = h - 45;
 
@@ -243,24 +247,25 @@ public class EditorForm {
             try {
                 Image img = new Image(node.getAttachmentPath(), imgW, imgH, true, true);
                 gc.drawImage(img, imgX, imgY);
-            } catch (Exception e) { /* ігноруємо помилки */ }
+            } catch (Exception e) {
+                /* ігноруємо помилки */ }
         } else if ("VIDEO".equals(node.getAttachmentType())) {
             gc.setFill(Color.BLACK);
             gc.fillRect(imgX, imgY, imgW, imgH);
             gc.setFill(Color.WHITE);
             gc.fillText("▶ VIDEO", imgX + 20, imgY + 40);
         } else if ("FILE".equals(node.getAttachmentType())) {
-             gc.setFill(Color.LIGHTGRAY);
-             gc.fillRect(imgX, imgY, imgW, imgH);
-             gc.setFill(Color.BLACK);
-             gc.fillText("📄 FILE", imgX + 10, imgY + 30);
+            gc.setFill(Color.LIGHTGRAY);
+            gc.fillRect(imgX, imgY, imgW, imgH);
+            gc.setFill(Color.BLACK);
+            gc.fillText("📄 FILE", imgX + 10, imgY + 30);
         }
     }
-    
+
     private void drawAreaBorder(Node node) {
         // 1. Знаходимо межі (minX, minY, maxX, maxY) для вузла та всіх його дітей
         Bounds bounds = calculateBounds(node);
-        
+
         double padding = 20; // Відступ
         double x = bounds.minX - padding;
         double y = bounds.minY - padding;
@@ -273,11 +278,11 @@ public class EditorForm {
         gc.setLineDashes(10); // Пунктир
         gc.setLineWidth(2);
         // Напівпрозора заливка, щоб виділити групу
-        gc.setFill(Color.rgb(200, 200, 200, 0.2)); 
-        
+        gc.setFill(Color.rgb(200, 200, 200, 0.2));
+
         gc.fillRect(x, y, w, h);
         gc.strokeRect(x, y, w, h);
-        
+
         // Підпис області (зверху зліва)
         gc.setFill(Color.GRAY);
         gc.setFont(new Font("Arial", 12));
@@ -288,8 +293,12 @@ public class EditorForm {
     // Допоміжний клас для меж
     private static class Bounds {
         double minX, minY, maxX, maxY;
+
         public Bounds(double x, double y, double w, double h) {
-            this.minX = x; this.minY = y; this.maxX = x + w; this.maxY = y + h;
+            this.minX = x;
+            this.minY = y;
+            this.maxX = x + w;
+            this.maxY = y + h;
         }
     }
 
@@ -297,7 +306,7 @@ public class EditorForm {
     private Bounds calculateBounds(Node node) {
         double w = getActualWidth(node);
         double h = getActualHeight(node);
-        
+
         Bounds currentBounds = new Bounds(node.getX(), node.getY(), w, h);
 
         for (Node child : node.getChildren()) {
@@ -310,7 +319,7 @@ public class EditorForm {
         }
         return currentBounds;
     }
-    
+
     private void drawImportantMark(Node node) {
         gc.setFill(Color.RED);
         gc.fillOval(node.getX() - 5, node.getY() - 5, 12, 12);
@@ -335,40 +344,63 @@ public class EditorForm {
 
         MenuItem itemAddChild = new MenuItem("➕ Додати під-вузол");
         itemAddChild.setOnAction(e -> addChildNode());
-        
+
+        MenuItem itemCopy = new MenuItem("📄 Копіювати");
+        itemCopy.setOnAction(e -> {
+            if (selectedNode != null) {
+                ClipboardManager.copy(selectedNode);
+            }
+        });
+        MenuItem itemPaste = new MenuItem("📋 Вставити");
+        // Робимо кнопку активною, тільки якщо в буфері щось є
+        itemPaste.setDisable(!ClipboardManager.hasContent());
+        itemPaste.setOnAction(e -> {
+            if (selectedNode != null) {
+                IPrototype pastedItem = ClipboardManager.paste();
+                if (pastedItem instanceof Node) {
+                    Node newNode = (Node) pastedItem;
+                    // Трохи зсуваємо, щоб було видно, що це новий об'єкт
+                    newNode.setX(selectedNode.getX() + 50);
+                    newNode.setY(selectedNode.getY() + 50);
+
+                    selectedNode.getChildren().add(newNode);
+                    draw(); // Оновлюємо малюнок
+                }
+            }
+        });
+
         // Кнопка видалення
         MenuItem itemDelete = new MenuItem("❌ Видалити вузол");
         itemDelete.setOnAction(e -> deleteSelectedNode());
-        
+
         // Перемикач "Важливо" (Тоггл)
         MenuItem itemImportant = new MenuItem(
-            "IMPORTANT".equals(selectedNode.getCategory()) ? "⚪ Зняти важливість" : "❗ Позначити важливим"
-        );
+                "IMPORTANT".equals(selectedNode.getCategory()) ? "⚪ Зняти важливість" : "❗ Позначити важливим");
         itemImportant.setOnAction(e -> toggleCategory("IMPORTANT"));
 
         // Перемикач "Область"
         MenuItem itemArea = new MenuItem(
-             "AREA".equals(selectedNode.getCategory()) ? "Зробити звичайним" : "🔲 Зробити областю"
-        );
+                "AREA".equals(selectedNode.getCategory()) ? "Зробити звичайним" : "🔲 Зробити областю");
         itemArea.setOnAction(e -> toggleCategory("AREA"));
 
         // Меню вкладень
         Menu menuAttach = new Menu("📎 Вкладення");
         MenuItem itemImg = new MenuItem("🖼️ Фото");
         itemImg.setOnAction(e -> attachFile("IMAGE"));
-        
+
         MenuItem itemVid = new MenuItem("🎥 Відео");
         itemVid.setOnAction(e -> attachFile("VIDEO"));
-        
+
         MenuItem itemFile = new MenuItem("📄 Файл");
         itemFile.setOnAction(e -> attachFile("FILE"));
-        
+
         MenuItem itemClear = new MenuItem("🗑️ Прибрати вкладення");
         itemClear.setOnAction(e -> clearAttachment());
-        
+
         menuAttach.getItems().addAll(itemImg, itemVid, itemFile, new SeparatorMenuItem(), itemClear);
 
-        menu.getItems().addAll(itemEdit, itemAddChild, new SeparatorMenuItem(), itemImportant, itemArea, menuAttach, new SeparatorMenuItem(), itemDelete);
+        menu.getItems().addAll(itemEdit, itemAddChild, new SeparatorMenuItem(), itemCopy, itemPaste, itemImportant, itemArea, menuAttach,
+                new SeparatorMenuItem(), itemDelete);
         menu.show(canvas, screenX, screenY);
     }
 
@@ -378,12 +410,13 @@ public class EditorForm {
             showAlert("Спочатку виберіть вузол!");
             return;
         }
-        
+
         FileChooser fileChooser = new FileChooser();
         fileChooser.setTitle("Виберіть файл");
 
         if ("IMAGE".equals(type)) {
-            fileChooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("Зображення", "*.png", "*.jpg", "*.jpeg", "*.gif"));
+            fileChooser.getExtensionFilters()
+                    .add(new FileChooser.ExtensionFilter("Зображення", "*.png", "*.jpg", "*.jpeg", "*.gif"));
         } else if ("VIDEO".equals(type)) {
             fileChooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("Відео", "*.mp4", "*.avi", "*.mkv"));
         }
@@ -398,7 +431,8 @@ public class EditorForm {
 
     // Попередній перегляд (Double Click)
     private void showPreview() {
-        if (selectedNode == null || selectedNode.getAttachmentPath() == null) return;
+        if (selectedNode == null || selectedNode.getAttachmentPath() == null)
+            return;
 
         String type = selectedNode.getAttachmentType();
         String path = selectedNode.getAttachmentPath();
@@ -407,14 +441,14 @@ public class EditorForm {
             Alert alert = new Alert(Alert.AlertType.INFORMATION);
             alert.setTitle("Перегляд");
             alert.setHeaderText(selectedNode.getText());
-            
+
             ImageView imageView = new ImageView(new Image(path));
             imageView.setPreserveRatio(true);
             imageView.setFitHeight(500);
-            
+
             alert.getDialogPane().setContent(new VBox(imageView));
             alert.showAndWait();
-        
+
         } else if ("VIDEO".equals(type)) {
             // ВІДЕО ПЛЕЄР
             Stage videoStage = new Stage();
@@ -423,14 +457,14 @@ public class EditorForm {
             Media media = new Media(path);
             MediaPlayer mediaPlayer = new MediaPlayer(media);
             MediaView mediaView = new MediaView(mediaPlayer);
-            
+
             mediaView.setFitWidth(800);
             mediaView.setPreserveRatio(true);
 
             StackPane root = new StackPane(mediaView);
             videoStage.setScene(new Scene(root, 800, 600));
             videoStage.show();
-            
+
             mediaPlayer.play();
             videoStage.setOnCloseRequest(e -> mediaPlayer.stop());
         }
@@ -438,8 +472,9 @@ public class EditorForm {
 
     // Логіка перемикання категорії (Toggle)
     private void toggleCategory(String category) {
-        if (selectedNode == null) return;
-        
+        if (selectedNode == null)
+            return;
+
         if (category.equals(selectedNode.getCategory())) {
             selectedNode.setCategory("NORMAL"); // Вимикаємо
         } else {
@@ -457,7 +492,8 @@ public class EditorForm {
     }
 
     private void editNodeText() {
-        if (selectedNode == null) return;
+        if (selectedNode == null)
+            return;
         TextInputDialog dialog = new TextInputDialog(selectedNode.getText());
         dialog.setTitle("Редагування");
         dialog.setHeaderText("Введіть новий текст:");
@@ -467,14 +503,15 @@ public class EditorForm {
             draw();
         });
     }
-    
+
     private void deleteSelectedNode() {
-        if (selectedNode == null) return;
+        if (selectedNode == null)
+            return;
         if (selectedNode == map.getRootNode()) {
             showAlert("Не можна видалити кореневий вузол!");
             return;
         }
-        
+
         Node parent = findParent(map.getRootNode(), selectedNode);
         if (parent != null) {
             parent.getChildren().remove(selectedNode);
@@ -492,8 +529,10 @@ public class EditorForm {
     }
 
     private void toggleTheme() {
-        if (currentThemeFactory instanceof LightThemeFactory) currentThemeFactory = new DarkThemeFactory();
-        else currentThemeFactory = new LightThemeFactory();
+        if (currentThemeFactory instanceof LightThemeFactory)
+            currentThemeFactory = new DarkThemeFactory();
+        else
+            currentThemeFactory = new LightThemeFactory();
         nodeRenderer = currentThemeFactory.createNodeRenderer();
         lineStrategy = currentThemeFactory.createLineStrategy();
         draw();
@@ -510,11 +549,11 @@ public class EditorForm {
 
         Node clickedNode = findNodeAt(map.getRootNode(), e.getX(), e.getY());
         selectedNode = clickedNode;
-        
+
         // Правий клік -> Меню
         if (e.getButton() == MouseButton.SECONDARY && selectedNode != null) {
             showContextMenu(e.getScreenX(), e.getScreenY());
-        } 
+        }
         // Лівий клік -> Початок перетягування
         else if (selectedNode != null) {
             dragOffsetX = e.getX() - selectedNode.getX();
@@ -541,8 +580,9 @@ public class EditorForm {
             draw();
         }
     }
-    
-    private void onMouseReleased(MouseEvent e) {}
+
+    private void onMouseReleased(MouseEvent e) {
+    }
 
     // --- ДОПОМІЖНІ ---
 
@@ -550,32 +590,40 @@ public class EditorForm {
         double w = getActualWidth(current);
         double h = getActualHeight(current);
         if (x >= current.getX() && x <= current.getX() + w &&
-            y >= current.getY() && y <= current.getY() + h) return current;
+                y >= current.getY() && y <= current.getY() + h)
+            return current;
         for (Node child : current.getChildren()) {
             Node found = findNodeAt(child, x, y);
-            if (found != null) return found;
+            if (found != null)
+                return found;
         }
         return null;
     }
 
     private Node findParent(Node current, Node target) {
         for (Node child : current.getChildren()) {
-            if (child == target) return current;
+            if (child == target)
+                return current;
             Node found = findParent(child, target);
-            if (found != null) return found;
+            if (found != null)
+                return found;
         }
         return null;
     }
 
     private double getActualWidth(Node node) {
-        if ("AREA".equals(node.getCategory())) return 250;
-        if (!"NONE".equals(node.getAttachmentType())) return 120;
+        if ("AREA".equals(node.getCategory()))
+            return 250;
+        if (!"NONE".equals(node.getAttachmentType()))
+            return 120;
         return nodeRenderer.getWidth(node);
     }
 
     private double getActualHeight(Node node) {
-        if ("AREA".equals(node.getCategory())) return 200;
-        if (!"NONE".equals(node.getAttachmentType())) return 120;
+        if ("AREA".equals(node.getCategory()))
+            return 200;
+        if (!"NONE".equals(node.getAttachmentType()))
+            return 120;
         return nodeRenderer.getHeight(node);
     }
 
@@ -587,7 +635,7 @@ public class EditorForm {
             new Alert(Alert.AlertType.ERROR, "Помилка: " + e.getMessage()).show();
         }
     }
-    
+
     private void showAlert(String msg) {
         new Alert(Alert.AlertType.WARNING, msg).show();
     }
