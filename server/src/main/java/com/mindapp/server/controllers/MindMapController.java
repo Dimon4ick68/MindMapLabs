@@ -32,7 +32,6 @@ public class MindMapController {
         return mindMapService.saveMap(map);
     }
     
-    // --- НОВИЙ МЕТОД ---
     @DeleteMapping("/{id}")
     public void deleteMap(@PathVariable Long id) {
         mindMapService.deleteMap(id);

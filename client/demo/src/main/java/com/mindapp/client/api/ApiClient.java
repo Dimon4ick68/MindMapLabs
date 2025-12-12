@@ -52,9 +52,7 @@ public boolean login(String username, String password) {
                     .POST(HttpRequest.BodyPublishers.ofString(json))
                     .build();
             
-            // --- ОСЬ ЦЬОГО РЯДКА НЕ ВИСТАЧАЛО ---
             HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
-            // ------------------------------------
 
             return response.statusCode() == 200;
         } catch (Exception e) { return false; }
